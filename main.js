@@ -4,8 +4,19 @@
 
 var LIAUTONS = {
     init: function (time, debug) {
-        LIAUTONS.log('LIAUTONS: # Init()');
-        var navBar = document.getElementsByClassName('header-section first-child')[0];
+        var ns = LIAUTONS;
+        var url = 'linkedin.com/people/pymk';
+        ns.log('LIAUTONS: # Init()');
+        var classes = document.getElementsByClassName('header-section first-child');
+        if (classes.length === 0) {
+            ns.log("LIAUTONS: Error: class 'header-section first-child' could not be found.");
+            return;
+        }
+        if (document.URL.indexOf(url) < 0) {
+            ns.log('Unappropriated URL');
+            return;
+        }
+        var navBar = classes[0];
         var navItem = document.createElement('div');
         var button = document.createElement('button');
         var counterUI = document.createElement('input');
@@ -13,7 +24,6 @@ var LIAUTONS = {
         navItem.appendChild(button);
         navItem.appendChild(counterUI);
         navBar.insertBefore(navItem, navBar.firstChild.nextSibling.nextSibling);
-        var ns = LIAUTONS;
         button.onclick = function () {
             if (!ns.vars.isRunning) {
                 ns.log('LIAUTONS: >>> Starting...');
@@ -25,8 +35,8 @@ var LIAUTONS = {
                 ns.reset();
             }
         };
-        var autoClickTime = typeof time != 'undefined' ? time : 100;
-        var debugLoggingEnabled = typeof debug != 'undefined' ? debug : false;
+        var autoClickTime = typeof time !== 'undefined' ? time : 100;
+        var debugLoggingEnabled = typeof debug !== 'undefined' ? debug : false;
         var c = 0;
         var clicked = [];
         var progressId = '';
@@ -55,7 +65,7 @@ var LIAUTONS = {
             clicked: clicked,
             progressId: progressId,
             blackList: blackList,
-            badIdTimeout: badIdTimeout
+            badIdTimeout: badIdTimeout,
         };
 
         ns.initialize();
