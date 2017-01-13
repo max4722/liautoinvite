@@ -18,21 +18,50 @@ var LIAUTONS = {
         }
         var navBar = classes[0];
         var navItem = document.createElement('div');
-        var button = document.createElement('button');
+        var buttonStartStop = document.createElement('button');
+        var buttonPause = document.createElement('button');
         var counterUI = document.createElement('input');
+        var totalUI = document.createElement('input');
+        var blacklistedUI = document.createElement('input');
         counterUI.size = 1;
-        navItem.appendChild(button);
+        counterUI.readOnly = true;
+        totalUI.size = 1;
+        totalUI.readOnly = true;
+        blacklistedUI.size = 1;
+        blacklistedUI.readOnly = true;
+        navItem.appendChild(buttonStartStop);
+        navItem.appendChild(buttonPause);
         navItem.appendChild(counterUI);
+        navItem.appendChild(totalUI);
+        navItem.appendChild(blacklistedUI);
         navBar.insertBefore(navItem, navBar.firstChild.nextSibling.nextSibling);
-        button.onclick = function () {
+        buttonStartStop.onclick = function () {
             if (!ns.vars.isRunning) {
                 ns.log('LIAUTONS: >>> Starting...');
                 ns.initialize();
                 ns.vars.isRunning = true;
-                ns.vars.button.innerHTML = "STOP";
+                ns.vars.buttonStartStop.innerHTML = "STOP";
+                ns.vars.isPaused = false;
+                ns.vars.buttonPause.innerHTML = "PAUSE";
+                ns.scheduleUpdate();
             } else {
                 ns.log('LIAUTONS: >>> Stopping...');
                 ns.reset();
+            }
+        };
+        buttonPause.onclick = function () {
+            if (!ns.vars.isRunning) {
+                ns.reset();
+            } else {
+                if (ns.vars.isPaused) {
+                    ns.vars.isPaused = false;
+                    ns.vars.buttonPause.innerHTML = "PAUSE";
+                    ns.scheduleUpdate();
+                }
+                else {
+                    ns.vars.isPaused = true;
+                    ns.vars.buttonPause.innerHTML = "RESUME";
+                }
             }
         };
         var autoClickTime = typeof time !== 'undefined' ? time : 100;
@@ -42,35 +71,48 @@ var LIAUTONS = {
         var progressId = '';
         var blackList = [];
         var badIdTimeout = 0;
+        var cl = [];
 
         var getDebugLoggingEnabled = function () {
             return debugLoggingEnabled;
         };
-        var getButton = function () {
-            return button;
+        var getButtonStartStop = function () {
+            return buttonStartStop;
+        };
+        var getButtonPause = function () {
+            return buttonPause;
         };
         var getCounterUI = function () {
             return counterUI;
         };
+        var getTotalUI = function () {
+            return totalUI;
+        }
+        var getBlacklistedUI = function () {
+            return blacklistedUI;
+        }
         var getAutoClickTime = function () {
             return autoClickTime;
         };
 
         ns.vars = {
             debugLoggingEnabled: getDebugLoggingEnabled(),
-            button: getButton(),
+            buttonStartStop: getButtonStartStop(),
+            buttonPause: getButtonPause(),
             counterUI: getCounterUI(),
+            totalUI: getTotalUI(),
+            blacklistedUI: getBlacklistedUI(),
             autoClickTime: getAutoClickTime(),
             c: c,
             clicked: clicked,
             progressId: progressId,
             blackList: blackList,
             badIdTimeout: badIdTimeout,
+            cl: cl
         };
 
         ns.initialize();
         ns.reset();
-        ns.addContact();
     },
 
     vars: {},
@@ -84,18 +126,26 @@ var LIAUTONS = {
         v.progressId = '';
         v.blackList = [];
         v.badIdTimeout = 0;
-        ns.updateCounter(v.c);
+        v.cl = ns.getDocumentElements();
+        v.totalUI.value = v.cl.length;
+        ns.updateCountersUI();
     },
 
     reset: function () {
         LIAUTONS.log('LIAUTONS: # reset()');
         LIAUTONS.vars.isRunning = false;
-        LIAUTONS.vars.button.innerHTML = "RUN";
+        LIAUTONS.vars.buttonStartStop.innerHTML = "RUN";
+        LIAUTONS.vars.isPaused = false;
+        LIAUTONS.vars.buttonPause.innerHTML = "PAUSE";
     },
 
-    updateCounter: function (num) {
-        LIAUTONS.vars.c = num;
-        LIAUTONS.vars.counterUI.value = num;
+    updateCountersUI: function () {
+        LIAUTONS.vars.counterUI.value = LIAUTONS.vars.c;
+        LIAUTONS.vars.blacklistedUI.value = LIAUTONS.vars.blackList.length;
+    },
+
+    getDocumentElements: function () {
+        return document.getElementsByClassName("bt-request-buffed buffed-blue-bkg-1");
     },
 
     getId: function (buttonElement) {
@@ -106,50 +156,59 @@ var LIAUTONS = {
         func = typeof func != 'undefined' ? func : function (x) {
             return x;
         };
-        var found = false;
+        var isFound = false;
         [].forEach.call(arr, function (element) {
-            if (found) return;
-            if (func(element) === item) found = true;
+            if (isFound) return;
+            if (func(element) === item) isFound = true;
         });
-        return found;
+        return isFound;
     },
 
     addContact: function () {
         var ns = LIAUTONS;
         var v = ns.vars;
         if (v.isRunning) {
-            var cl = document.getElementsByClassName("bt-request-buffed buffed-blue-bkg-1");
-            if (cl.length === v.blackList.length) {
+            if (v.cl.length === v.blackList.length) {
                 ns.log('LIAUTONS: >>> Done. (blackList.length=' + v.blackList.length + ')');
                 ns.reset();
             } else {
                 if (v.progressId === '') {
                     var i = -1;
                     do {
-                        i = Math.floor(Math.random() * cl.length);
+                        i = Math.floor(Math.random() * v.cl.length);
                     }
-                    while (ns.findItem(v.blackList, ns.getId(cl[i])));
-                    v.progressId = ns.getId(cl[i]);
-                    cl[i].click();
+                    while (ns.findItem(v.blackList, ns.getId(v.cl[i])));
+                    v.progressId = ns.getId(v.cl[i]);
+                    v.cl[i].click();
                 } else {
-                    if (!ns.findItem(cl, v.progressId, ns.getId)) {
+                    v.cl = ns.getDocumentElements();
+                    if (!ns.findItem(v.cl, v.progressId, ns.getId)) {
                         ns.log('LIAUTONS: processed id: ' + v.progressId);
                         v.clicked.push(v.progressId);
                         v.progressId = '';
-                        ns.updateCounter(v.c + 1);
+                        v.c += 1;
                         v.badIdTimeout = 0;
+                        ns.updateCountersUI();
                     } else {
                         if (v.badIdTimeout > 5000) {
+                            v.badIdTimeout = 0;
                             ns.log('LIAUTONS: ! blacklisting id: ' + v.blackList);
                             v.blackList.push(v.progressId);
                             v.progressId = '';
+                            ns.updateCountersUI();
                         } else
                             v.badIdTimeout += v.autoClickTime;
                     }
                 }
             }
         }
-        setTimeout(ns.addContact, v.autoClickTime);
+        if (v.isRunning && !v.isPaused) {
+            ns.scheduleUpdate();
+        }
+    },
+
+    scheduleUpdate: function () {
+        setTimeout(LIAUTONS.addContact, LIAUTONS.vars.autoClickTime);
     },
 
     log: function () {
